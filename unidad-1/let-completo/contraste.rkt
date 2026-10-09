@@ -1,0 +1,37 @@
+#lang racket
+(require rackunit "main.rkt" "vals.rkt")
+
+;; Los mismos 21 casos de las tablas de interp.rkt.
+(define casos
+  (list
+   (list "not(zero?(0))" (boolval #f))
+   (list "not(false)" (boolval #t))
+   (list "not(0)" #rx"^val->bool:")
+   (list "and(true, false)" (boolval #f))
+   (list "and(true, true)" (boolval #t))
+   (list "and(false, car(emptylist))" (boolval #f))
+   (list "or(false, true)" (boolval #t))
+   (list "or(false, false)" (boolval #f))
+   (list "or(true, car(emptylist))" (boolval #t))
+   (list "xor(true, true)" (boolval #f))
+   (list "xor(true, false)" (boolval #t))
+   (list "xor(false, 7)" (intval 7))
+   (list "let x = 3 in cond zero?(x) ==> 100 zero?(-(x,3)) ==> 200 end" (intval 200))
+   (list "cond true ==> 8 true ==> car(emptylist) end" (intval 8))
+   (list "cond end" #rx"^car:")
+   (list "let x = 4 in list(x, -(x,1), -(x,3))" (listval (list (intval 4) (intval 3) (intval 1))))
+   (list "list(true, list(2))" (listval (list (boolval #t) (listval (list (intval 2))))))
+   (list "list()" (listval '()))
+   (list "let u = 7 in unpack x y = list(u, 3) in -(x, y)" (intval 4))
+   (list "unpack = list() in 9" (intval 9))
+   (list "unpack x y = list(1) in -(x, y)" #rx"^unpack:")))
+
+(for ([caso casos])
+  (define programa (first caso))
+  (define esperado (second caso))
+  (if (regexp? esperado)
+      (check-exn esperado (lambda () (run programa)) programa)
+      (check-equal? (run programa) esperado programa))
+  (displayln programa)
+  (with-handlers ([exn:fail? (lambda (e) (displayln (exn-message e)))])
+    (println (run programa))))
